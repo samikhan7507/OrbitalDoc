@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#02040a">
+<title>Orbital Dock 3D - Space Station Docking Simulator | Sami Khan</title>
+<style>
+:root{--ac:#5ad1ff;--ok:#3dffa0;--bad:#ff5a6e;--warn:#ffc857;--glass:rgba(8,16,30,.58);--line:rgba(120,200,255,.25)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:none}
+html,body{margin:0;height:100%;background:#02040a;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#dff3ff}
+canvas#canvas{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:block;outline:none}
+.glass{background:var(--glass);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+#hud{position:fixed;inset:0;pointer-events:none}
+#hud>*{position:absolute}
+.v{font-variant-numeric:tabular-nums;font-weight:600}
+.good{color:var(--ok)}.badc{color:var(--bad)}.warnc{color:var(--warn)}
+#brand{top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));padding:8px 14px}
+#brand b{letter-spacing:.18em;font-size:13px;color:var(--ac)}#brand small{display:block;opacity:.6;font-size:10px;margin-top:2px}
+#topc{top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
+#status{padding:7px 20px;font-weight:700;letter-spacing:.2em;font-size:13px}
+#lvl{padding:4px 12px;font-size:11px;letter-spacing:.14em;opacity:.9}
+#apb{padding:6px 14px;font-size:12px;letter-spacing:.14em;color:var(--ok);border-color:rgba(61,255,160,.5);display:none;animation:pulse 1.4s infinite}
+#warn{padding:6px 14px;font-size:12px;letter-spacing:.14em;color:var(--bad);border-color:rgba(255,90,110,.6);display:none}
+#chips{top:max(58px,calc(env(safe-area-inset-top) + 48px));left:max(10px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.chip{font-size:11px;padding:5px 10px;opacity:.9}
+#euler{padding:9px 12px;font-size:11px;min-width:176px}
+#euler h5{margin:0 0 5px;font-size:10px;letter-spacing:.14em;color:var(--ac)}
+#euler .r{display:flex;justify-content:space-between;line-height:1.55}
+#gl{margin-top:5px;font-weight:700;letter-spacing:.08em;font-size:11px}
+#telemetry{left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));padding:12px 14px;min-width:210px}
+#telemetry .row{display:flex;justify-content:space-between;gap:16px;font-size:12px;line-height:1.7}
+#telemetry .row span:first-child{opacity:.6;letter-spacing:.08em}
+#checks{left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:8px;padding:8px 10px}
+.chk{font-size:11px;letter-spacing:.12em;padding:6px 10px;border-radius:9px;border:1px solid var(--line);background:rgba(255,80,100,.16);color:#ff9aa6;transition:.15s}
+.chk.on{background:rgba(61,255,160,.16);color:var(--ok);border-color:rgba(61,255,160,.5)}
+#fuelbox{right:max(58px,calc(env(safe-area-inset-right) + 52px));top:max(10px,env(safe-area-inset-top));padding:8px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;letter-spacing:.1em}
+#fuelbar{width:12px;height:110px;border-radius:7px;background:rgba(255,255,255,.1);overflow:hidden;display:flex;align-items:flex-end}
+#fuelfill{width:100%;height:100%;background:linear-gradient(#3dffa0,#5ad1ff);transition:height .1s}
+#marker{width:64px;height:64px;margin:-32px 0 0 -32px;display:none}
+#marker .ring{position:absolute;inset:0;border:2px solid var(--ac);border-radius:50%;box-shadow:0 0 14px var(--ac),inset 0 0 14px rgba(90,209,255,.3);animation:pulse 1.6s ease-in-out infinite}
+#marker .lbl{position:absolute;top:70px;left:50%;transform:translateX(-50%);font-size:11px;white-space:nowrap;text-shadow:0 0 6px #000}
+#marker.arrow .ring{border-radius:6px;transform:rotate(45deg) scale(.55);border-width:3px}
+@keyframes pulse{50%{transform:scale(1.1);opacity:.75}}
+#apb{animation:fade 1.4s infinite}@keyframes fade{50%{opacity:.55}}
+#cross{left:50%;top:50%;width:22px;height:22px;margin:-11px;opacity:.55}
+#cross:before,#cross:after{content:"";position:absolute;background:var(--ac)}
+#cross:before{left:10px;top:0;width:2px;height:22px}#cross:after{top:10px;left:0;height:2px;width:22px}
+#msg{left:50%;top:34%;transform:translate(-50%,-50%);text-align:center;display:none;padding:20px 30px;pointer-events:auto;min-width:300px}
+#msg h1{margin:0 0 6px;font-size:28px;letter-spacing:.2em}#msg p{margin:4px 0;opacity:.85;font-size:13px}
+#grade{font-size:54px;font-weight:800;line-height:1;margin:2px 0}
+#sc table{margin:8px auto;border-collapse:collapse;font-size:12px}#sc td{padding:2px 12px;text-align:right}#sc td:first-child{text-align:left;opacity:.65}
+#sc .tot td{border-top:1px solid var(--line);font-size:15px;font-weight:700;padding-top:5px}
+.btn{display:inline-block;margin:8px 5px 0;padding:8px 18px;border-radius:10px;border:1px solid var(--line);background:rgba(90,209,255,.12);color:var(--ac);font-size:12px;letter-spacing:.12em;cursor:pointer;pointer-events:auto;touch-action:manipulation}
+.btn:active,.btn.on{background:rgba(90,209,255,.35)}
+#replaybar{left:50%;bottom:max(70px,calc(env(safe-area-inset-bottom) + 60px));transform:translateX(-50%);width:min(420px,70vw);padding:8px 14px;display:none;pointer-events:auto}
+#replaybar i{display:block;height:4px;border-radius:2px;background:var(--ac);width:0}
+#inspector{right:max(60px,calc(env(safe-area-inset-right) + 54px));top:max(10px,env(safe-area-inset-top));padding:12px 14px;display:none;font-size:11px}
+#inspector h4{margin:0 0 6px;font-size:11px;letter-spacing:.14em;color:var(--ac)}
+#mat{display:grid;grid-template-columns:repeat(4,60px);gap:3px 6px;text-align:right}
+#mat div{padding:2px 4px;border-radius:4px;background:rgba(90,209,255,.07)}
+#mat .t{background:rgba(255,200,87,.16)}#mat .r{background:rgba(90,209,255,.12)}
+#inspector .note{opacity:.6;margin-top:6px;max-width:270px;line-height:1.4}
+#help{left:50%;top:50%;transform:translate(-50%,-50%);padding:18px 24px;font-size:12px;line-height:1.85;display:none;pointer-events:auto;max-width:94vw}
+#help kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:inherit;font-size:11px}
+#credit{right:max(10px,env(safe-area-inset-right));bottom:max(6px,env(safe-area-inset-bottom));font-size:10px;opacity:.6;pointer-events:auto}
+#credit a{color:var(--ac);text-decoration:none}
+#fps{right:max(60px,calc(env(safe-area-inset-right) + 54px));bottom:max(24px,calc(env(safe-area-inset-bottom) + 18px));font-size:10px;opacity:.4}
+#tools{right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;pointer-events:auto}
+.tb{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ac);cursor:pointer;touch-action:manipulation}
+.tb:active,.tb.on{background:rgba(90,209,255,.3)}
+#menu{right:max(60px,calc(env(safe-area-inset-right) + 54px));top:max(10px,env(safe-area-inset-top));padding:14px 16px;display:none;pointer-events:auto;font-size:11px;max-width:min(360px,70vw);max-height:92vh;overflow:auto}
+#menu h4{margin:10px 0 2px;font-size:10px;letter-spacing:.16em;color:var(--ac)}#menu h4:first-child{margin-top:0}
+#menu .btn{margin:4px 4px 0 0;padding:7px 11px;font-size:11px}
+#splash{position:fixed;inset:0;z-index:10;background:radial-gradient(ellipse at 50% 60%,#0a1630,#02040a 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s;text-align:center;padding:0 16px}
+#splash h1{letter-spacing:.35em;font-weight:300;font-size:clamp(22px,5vw,42px);margin:0;color:#fff}#splash h1 b{color:var(--ac);font-weight:700}
+#splash p{opacity:.6;letter-spacing:.2em;font-size:12px;margin:10px 0 24px}
+.bar{width:220px;height:3px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden}.bar i{display:block;height:100%;width:35%;background:var(--ac);animation:ld 1.2s infinite ease-in-out}
+@keyframes ld{0%{margin-left:-35%}100%{margin-left:100%}}
+#touch{position:fixed;inset:0;pointer-events:none;display:none;z-index:5}
+.stick{position:absolute;bottom:max(70px,calc(env(safe-area-inset-bottom) + 60px));width:128px;height:128px;border-radius:50%;pointer-events:auto;border:1px solid var(--line);background:radial-gradient(circle,rgba(90,209,255,.14),rgba(8,16,30,.35))}
+.stick .knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px;border-radius:50%;background:rgba(90,209,255,.45);border:1px solid var(--ac);box-shadow:0 0 14px rgba(90,209,255,.5)}
+.stick small{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:10px;letter-spacing:.14em;opacity:.65}
+#stL{left:max(14px,env(safe-area-inset-left))}#stR{right:max(14px,env(safe-area-inset-right))}
+.tbtn{position:absolute;pointer-events:auto;width:52px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ac);touch-action:none}
+.tbtn.act{background:rgba(90,209,255,.35)}
+body.touch #telemetry{transform:scale(.8);transform-origin:left bottom;bottom:max(205px,calc(env(safe-area-inset-bottom) + 195px))}
+body.touch #checks{bottom:auto;top:max(110px,calc(env(safe-area-inset-top) + 100px))}
+body.touch #euler{display:none}
+@media (max-height:520px){body.touch #telemetry{display:none}}
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<div id="splash"><h1>ORBITAL <b>DOCK</b> 3D</h1><p>SPACE STATION DOCKING SIMULATOR &middot; BY SAMI KHAN</p><div class="bar"><i></i></div></div>
+
+<div id="hud">
+  <div id="brand" class="glass"><b>ORBITAL DOCK 3D</b><small>by Sami Khan</small></div>
+  <div id="topc">
+    <div id="status" class="glass mono">FLYING</div>
+    <div id="lvl" class="glass mono">LEVEL 2 &middot; NORMAL</div>
+    <div id="apb" class="glass mono">AUTOPILOT ENGAGED &middot; move any control to take over</div>
+    <div id="warn" class="glass mono">DEBRIS</div>
+  </div>
+  <div id="chips">
+    <div id="cam" class="glass mono chip">CAMERA: CHASE</div>
+    <div id="euler" class="glass mono">
+      <h5 id="eh">ROTATION: QUATERNION</h5>
+      <div class="r"><span>YAW</span><span class="v" id="eY">0</span></div>
+      <div class="r"><span>PITCH</span><span class="v" id="eP">0</span></div>
+      <div class="r"><span>ROLL</span><span class="v" id="eR">0</span></div>
+      <div id="gl" class="good">NO GIMBAL LOCK</div>
+    </div>
+  </div>
+
+  <div id="cross"></div>
+  <div id="marker"><div class="ring"></div><div class="lbl mono">PORT</div></div>
+
+  <div id="telemetry" class="glass mono">
+    <div class="row"><span>SPEED</span><span class="v" id="tSpeed">0</span></div>
+    <div class="row"><span>DISTANCE</span><span class="v" id="tDist">0</span></div>
+    <div class="row"><span>CLOSING</span><span class="v" id="tClose">0</span></div>
+    <div class="row"><span>LATERAL</span><span class="v" id="tLat">0</span></div>
+    <div class="row"><span>LAT. SPEED</span><span class="v" id="tLatS">0</span></div>
+    <div class="row"><span>TILT</span><span class="v" id="tTilt">0</span></div>
+    <div class="row"><span>ROLL ERR</span><span class="v" id="tRoll">0</span></div>
+    <div class="row"><span>ROLL RATE</span><span class="v" id="tRR">0</span></div>
+    <div class="row"><span>ASSIST</span><span class="v" id="tAssist">ON</span></div>
+  </div>
+  <div id="checks" class="glass mono">
+    <div class="chk" id="cAlign">ALIGN</div><div class="chk" id="cSpeed">SPEED</div><div class="chk" id="cAtt">ATTITUDE</div><div class="chk" id="cRoll">ROLL</div>
+  </div>
+  <div id="fuelbox" class="glass mono"><span>FUEL</span><div id="fuelbar"><div id="fuelfill"></div></div><span class="v" id="fuelTxt">100</span></div>
+
+  <div id="msg" class="glass">
+    <h1 id="msgT"></h1><div id="grade"></div>
+    <div id="sc"></div>
+    <p id="msgA"></p>
+    <span class="btn" id="mReplay">&#9654; REPLAY</span><span class="btn" id="mNext">NEW RUN</span>
+  </div>
+  <div id="replaybar" class="glass mono"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px"><span>REPLAY</span><span class="btn" id="rStop" style="margin:0;padding:2px 10px">SKIP</span></div><div style="background:rgba(255,255,255,.12);border-radius:2px"><i id="rProg"></i></div></div>
+
+  <div id="inspector" class="glass mono">
+    <h4>TRANSFORM INSPECTOR &nbsp;<span style="opacity:.5">Model = T &times; R</span></h4>
+    <div id="mat"></div>
+    <div style="margin-top:8px">position <span class="v" id="iPos"></span></div>
+    <div>quaternion <span class="v" id="iQuat"></span></div>
+    <div class="note">Right-hand column (amber) = <b>translation</b>. The 3&times;3 block (blue) = <b>rotation</b> built from the quaternion.</div>
+  </div>
+
+  <div id="menu" class="glass mono">
+    <h4>LEVEL</h4>
+    <span class="btn" data-a="20">1 EASY</span><span class="btn" data-a="21">2 NORMAL</span><span class="btn" data-a="22">3 HARD</span><span class="btn" data-a="23">4 DEBRIS</span>
+    <h4>FLIGHT</h4>
+    <span class="btn" data-a="6" id="mAP">AUTOPILOT (P)</span><span class="btn" data-a="2">ASSIST (V)</span><span class="btn" data-a="5">INVERT PITCH (I)</span><span class="btn" data-a="4">NEW RUN (N)</span>
+    <h4>GIMBAL-LOCK LAB</h4>
+    <span class="btn" data-a="7" id="mEu">EULER / QUATERNION (G)</span><span class="btn" data-a="8">JUMP TO LOCK POSE (L)</span>
+    <h4>VIEW &amp; EFFECTS</h4>
+    <span class="btn" data-a="1">CAMERA (C)</span><span class="btn" id="mInsp">INSPECTOR (T)</span><span class="btn" data-a="12">GHOST (O)</span><span class="btn" data-a="11">BLOOM (B)</span><span class="btn" data-a="13">SHADOWS</span><span class="btn" data-a="14">FXAA</span>
+    <h4>REPLAY &amp; SOUND</h4>
+    <span class="btn" data-a="9">REPLAY LAST RUN (Y)</span><span class="btn" id="mSnd">SOUND: ON (M)</span><span class="btn" id="mHelp">HELP (H)</span>
+  </div>
+
+  <div id="help" class="glass mono">
+    <b style="color:var(--ac);letter-spacing:.15em">CONTROLS</b><br>
+    <kbd>W</kbd><kbd>S</kbd> fwd/back &nbsp;<kbd>A</kbd><kbd>D</kbd> left/right &nbsp;<kbd>R</kbd><kbd>F</kbd> up/down &nbsp;<kbd>Q</kbd><kbd>E</kbd> roll<br>
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd> or mouse-drag: yaw / pitch &nbsp;<kbd>Z</kbd>/<kbd>Space</kbd> brake &nbsp;<kbd>X</kbd> stop spin<br>
+    <kbd>V</kbd> assist &nbsp;<kbd>C</kbd> camera &nbsp;<kbd>T</kbd> inspector &nbsp;<kbd>I</kbd> invert &nbsp;<kbd>N</kbd> new run &nbsp;<kbd>M</kbd> sound<br>
+    <kbd>P</kbd> autopilot &nbsp;<kbd>G</kbd> Euler/quaternion &nbsp;<kbd>L</kbd> gimbal pose &nbsp;<kbd>Y</kbd> replay &nbsp;<kbd>O</kbd> ghost &nbsp;<kbd>B</kbd> bloom &nbsp;<kbd>1</kbd>-<kbd>4</kbd> level<br>
+    Gamepad: sticks move/aim, <kbd>A</kbd> brake, <kbd>B</kbd> assist, <kbd>Y</kbd> camera, <kbd>LB</kbd>/<kbd>RB</kbd> roll, D-pad up/down, <kbd>Start</kbd> new, <kbd>Back</kbd> autopilot<br>
+    <span style="opacity:.7">GOAL: centre on the glowing port, match the station's spin, touch down under 1.5 m/s. Match &rarr; green lights.</span>
+  </div>
+
+  <div id="tools">
+    <div class="tb glass" id="bMenu" title="Menu">&#9776;</div>
+    <div class="tb glass" id="bCam" title="Camera (C)">CAM</div>
+    <div class="tb glass" id="bAP" title="Autopilot (P)">AUTO</div>
+    <div class="tb glass" id="bHelp" title="Help (H)">?</div>
+    <div class="tb glass" id="bReset" title="New run (N)">NEW</div>
+  </div>
+  <div id="fps" class="mono"></div>
+  <div id="credit" class="mono">Sami Khan &middot; <a href="https://www.linkedin.com/in/samikhan07" target="_blank" rel="noopener">LinkedIn</a> &middot; <a href="https://github.com/samikhan7507" target="_blank" rel="noopener">GitHub</a></div>
+</div>
+
+<div id="touch">
+  <div class="stick" id="stL"><small>MOVE</small><div class="knob"></div></div>
+  <div class="stick" id="stR"><small>AIM</small><div class="knob"></div></div>
+  <div class="tbtn glass" id="tUp"   style="left:max(150px,calc(env(safe-area-inset-left) + 146px));bottom:max(150px,calc(env(safe-area-inset-bottom) + 140px))">UP</div>
+  <div class="tbtn glass" id="tDown" style="left:max(150px,calc(env(safe-area-inset-left) + 146px));bottom:max(98px,calc(env(safe-area-inset-bottom) + 88px))">DOWN</div>
+  <div class="tbtn glass" id="tRL"   style="right:max(150px,calc(env(safe-area-inset-right) + 146px));bottom:max(150px,calc(env(safe-area-inset-bottom) + 140px))">&#8630;</div>
+  <div class="tbtn glass" id="tRR2"  style="right:max(150px,calc(env(safe-area-inset-right) + 146px));bottom:max(98px,calc(env(safe-area-inset-bottom) + 88px))">&#8631;</div>
+  <div class="tbtn glass" id="tBrake" style="left:50%;margin-left:-60px;bottom:max(18px,env(safe-area-inset-bottom));width:56px">BRAKE</div>
+  <div class="tbtn glass" id="tKill"  style="left:50%;margin-left:6px;bottom:max(18px,env(safe-area-inset-bottom));width:56px">STOP&#8635;</div>
+  <div class="tbtn glass" id="tAssist2" style="left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom))">ASSIST</div>
+</div>
+
+<script>
+var $=function(i){return document.getElementById(i)};
+var isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+if(isTouch){document.body.classList.add('touch');$('touch').style.display='block';}
+/* index table - mirrors enum HudIndex in src/hud.h */
+var I={SPEED:0,DIST:1,AXIAL:2,LATERAL:3,CLOSING:4,LATSPEED:5,TILT:6,ROLL:7,ROLLRATE:8,FUEL:9,STATE:10,CAM:11,ASSIST:12,PORTX:13,PORTY:14,PORTVIS:15,FPS:16,INVERT:17,
+ OKALIGN:18,OKSPEED:19,OKATT:20,OKROLL:21,TIME:22,POS:23,QUAT:26,MAT:30,CRASH:46,EULERMODE:47,YAW:48,PITCH:49,EROLL:50,AUTOPILOT:51,LEVEL:52,SCORE:53,SC_TIME:54,SC_FUEL:55,
+ SC_PREC:56,GHOST:57,REPLAYPROG:58,ENGINE:59,RCS:60,NEARDEBRIS:61,BRAKE:62,GRADE:63,BEST:64,NEWBEST:65,SC_BASE:66,ASSISTED:67,BLOOM:68,GHOSTON:69};
+var CAMS=['COCKPIT','CHASE','ORBIT','TRACKING'],LV=['EASY','NORMAL','HARD','DEBRIS'],MUL=[1,1.5,2.2,2.8],GR=['S','A','B','C'],GRC=['#ffd34d','#3dffa0','#5ad1ff','#ff9aa6'];
+var ready=false,helpOn=false,inspOn=false,menuOn=false,lastState=-1,lastAP=0,lastEuler=0,bestStore={};
+try{bestStore=JSON.parse(localStorage.getItem('od3d_best')||'{}')}catch(e){}
+
+/* ---------------- audio: everything synthesised with the Web Audio API (no files) ---------------- */
+var AU={ctx:null,muted:false};
+function audioInit(){
+  if(AU.ctx){if(AU.ctx.state==='suspended')AU.ctx.resume();return;}
+  try{
+    var C=window.AudioContext||window.webkitAudioContext;if(!C)return;var c=AU.ctx=new C();
+    AU.master=c.createGain();AU.master.gain.value=AU.muted?0:0.55;AU.master.connect(c.destination);
+    var nb=c.createBuffer(1,c.sampleRate*2,c.sampleRate),d=nb.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    function noise(){var s=c.createBufferSource();s.buffer=nb;s.loop=true;s.start();return s;}
+    AU.eF=c.createBiquadFilter();AU.eF.type='lowpass';AU.eF.frequency.value=200;AU.eG=c.createGain();AU.eG.gain.value=0;noise().connect(AU.eF);AU.eF.connect(AU.eG);AU.eG.connect(AU.master);
+    var rb=c.createBiquadFilter();rb.type='bandpass';rb.frequency.value=3000;rb.Q.value=0.8;AU.rG=c.createGain();AU.rG.gain.value=0;noise().connect(rb);rb.connect(AU.rG);AU.rG.connect(AU.master);
+    var o=c.createOscillator();o.type='sawtooth';o.frequency.value=46;var of=c.createBiquadFilter();of.type='lowpass';of.frequency.value=110;AU.oG=c.createGain();AU.oG.gain.value=0;o.connect(of);of.connect(AU.oG);AU.oG.connect(AU.master);o.start();
+    [55,82.4].forEach(function(f){var p=c.createOscillator();p.type='sine';p.frequency.value=f;var g=c.createGain();g.gain.value=0.025;p.connect(g);g.connect(AU.master);p.start();});
+  }catch(e){AU.ctx=null;}
+}
+function tone(f,dur,vol,type,slide){if(!AU.ctx||AU.muted)return;var c=AU.ctx,o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(AU.master);o.start(t);o.stop(t+dur+0.05);}
+function burst(dur,vol){if(!AU.ctx||AU.muted)return;var c=AU.ctx,s=c.createBufferSource(),b=c.createBuffer(1,c.sampleRate*dur,c.sampleRate),d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  s.buffer=b;var f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=900;var g=c.createGain();g.gain.value=vol;s.connect(f);f.connect(g);g.connect(AU.master);s.start();}
+function setMute(m){AU.muted=m;if(AU.master)AU.master.gain.value=m?0:0.55;$('mSnd').textContent='SOUND: '+(m?'OFF':'ON')+' (M)';}
+var nextBeep=0;
+function audioFrame(f){
+  if(!AU.ctx||AU.muted)return;var t=AU.ctx.currentTime;
+  AU.eG.gain.setTargetAtTime(f[I.ENGINE]*0.5+f[I.BRAKE]*0.05,t,0.06);AU.eF.frequency.setTargetAtTime(160+f[I.ENGINE]*520,t,0.08);
+  AU.oG.gain.setTargetAtTime(f[I.ENGINE]*0.12,t,0.08);AU.rG.gain.setTargetAtTime(Math.min(1,f[I.RCS]+f[I.BRAKE]*0.4)*0.11,t,0.03);
+  if(f[I.STATE]==0){
+    var all=f[I.OKALIGN]&&f[I.OKSPEED]&&f[I.OKATT]&&f[I.OKROLL];
+    if(f[I.NEARDEBRIS]<14&&t>=nextBeep){tone(220,0.1,0.18,'square');nextBeep=t+Math.max(0.12,f[I.NEARDEBRIS]/30);}
+    else if(f[I.DIST]<60&&t>=nextBeep){tone(all?990:620,0.07,0.1,'sine');nextBeep=t+Math.max(0.1,Math.min(1.2,f[I.DIST]/45));}
+  }
+}
+function soundEvent(s){if(s==1){[523,659,784,1047].forEach(function(f,i){setTimeout(function(){tone(f,0.5,0.22,'triangle')},i*130)});}
+  else if(s==2){burst(1.4,0.9);tone(160,0.9,0.4,'sawtooth',30);}}
+['keydown','pointerdown','touchstart','click'].forEach(function(e){addEventListener(e,audioInit,{passive:true})});
+
+/* ---------------- HUD ---------------- */
+var matEl=$('mat'),cells=[];
+for(var r=0;r<4;r++)for(var c=0;c<4;c++){var d=document.createElement('div');if(c==3&&r<3)d.className='t';else if(c<3&&r<3)d.className='r';matEl.appendChild(d);cells.push(d);}
+function fmt(v,p,u){return v.toFixed(p)+(u||'')}
+function setCls(el,cls){el.className='v '+cls}
+function showHelp(v){helpOn=v;$('help').style.display=v?'block':'none';}
+function toggleInsp(){inspOn=!inspOn;$('inspector').style.display=inspOn?'block':'none';$('bMenu').classList.remove('on');}
+function toggleMenu(){menuOn=!menuOn;$('menu').style.display=menuOn?'block':'none';$('bMenu').classList.toggle('on',menuOn);}
+function act(id){if(window.Module&&Module._ui_action)Module._ui_action(id);}
+
+window.updateHUD=function(f){
+  if(!ready){ready=true;var s=$('splash');s.style.opacity=0;setTimeout(function(){s.style.display='none'},900);showHelp(true);setTimeout(function(){if(helpOn)showHelp(false)},10000);}
+  var st=f[I.STATE],lv=f[I.LEVEL]|0;
+  $('tSpeed').textContent=fmt(f[I.SPEED],2,' m/s');
+  $('tDist').textContent=fmt(f[I.DIST],1,' m');
+  $('tClose').textContent=fmt(f[I.CLOSING],2,' m/s');setCls($('tClose'),f[I.OKSPEED]?'good':(f[I.CLOSING]<=0?'warnc':'badc'));
+  $('tLat').textContent=fmt(f[I.LATERAL],2,' m');setCls($('tLat'),f[I.OKALIGN]?'good':'warnc');
+  $('tLatS').textContent=fmt(f[I.LATSPEED],2,' m/s');
+  $('tTilt').textContent=fmt(f[I.TILT],1,'\u00b0');setCls($('tTilt'),f[I.OKATT]?'good':'warnc');
+  $('tRoll').textContent=fmt(f[I.ROLL],1,'\u00b0');setCls($('tRoll'),f[I.OKROLL]?'good':'warnc');
+  $('tRR').textContent=fmt(f[I.ROLLRATE],1,'\u00b0/s');
+  $('tAssist').textContent=f[I.ASSIST]?'SYNC':'OFF';
+  $('cAlign').className='chk'+(f[I.OKALIGN]?' on':'');$('cSpeed').className='chk'+(f[I.OKSPEED]?' on':'');
+  $('cAtt').className='chk'+(f[I.OKATT]?' on':'');$('cRoll').className='chk'+(f[I.OKROLL]?' on':'');
+  $('fuelfill').style.height=f[I.FUEL]+'%';$('fuelTxt').textContent=Math.round(f[I.FUEL]);
+  $('cam').textContent='CAMERA: '+CAMS[f[I.CAM]|0]+(f[I.GHOST]&&f[I.GHOSTON]?'  \u00b7  GHOST ON':'');
+  $('fps').textContent=Math.round(f[I.FPS])+' fps';
+  $('lvl').textContent='LEVEL '+(lv+1)+' \u00b7 '+LV[lv]+'  \u00d7'+MUL[lv]+(bestStore[lv]?'  \u00b7  BEST '+bestStore[lv]:'');
+
+  /* rotation-mode panel + gimbal lock indicator */
+  var eu=f[I.EULERMODE]>0.5,pitch=f[I.PITCH],cp=Math.abs(Math.cos(pitch*Math.PI/180));
+  $('eh').textContent='ROTATION: '+(eu?'EULER ANGLES':'QUATERNION');$('eh').style.color=eu?'var(--warn)':'var(--ac)';
+  $('eY').textContent=fmt(f[I.YAW],1,'\u00b0');$('eP').textContent=fmt(pitch,1,'\u00b0');$('eR').textContent=fmt(f[I.EROLL],1,'\u00b0');
+  var gl=$('gl');
+  if(eu&&cp<0.09){gl.textContent='GIMBAL LOCK: YAW = ROLL!';gl.className='badc';}
+  else if(eu&&cp<0.35){gl.textContent='nearing gimbal lock...';gl.className='warnc';}
+  else if(!eu&&cp<0.09){gl.textContent='pointing at the pole - quaternion still fine';gl.className='good';}
+  else{gl.textContent=eu?'free (pitch away from 90\u00b0)':'NO GIMBAL LOCK POSSIBLE';gl.className='good';}
+
+  /* banners */
+  $('apb').style.display=f[I.AUTOPILOT]>0.5?'block':'none';
+  var w=$('warn'),nd=f[I.NEARDEBRIS];
+  if(st==0&&nd<25){w.style.display='block';w.textContent='DEBRIS '+Math.max(0,nd).toFixed(0)+' m';w.style.color=nd<8?'var(--bad)':'var(--warn)';}else w.style.display='none';
+  var stt=$('status');
+  var names=['FLYING','DOCKED','CRASHED','REPLAY'],cols=['var(--ac)','var(--ok)','var(--bad)','var(--warn)'];
+  stt.textContent=names[st];stt.style.color=cols[st];
+  $('replaybar').style.display=st==3?'block':'none';$('rProg').style.width=(f[I.REPLAYPROG]*100)+'%';
+
+  if(st!=lastState){
+    if(lastState!=-1)soundEvent(st);
+    lastState=st;var m=$('msg');
+    if(st==1){
+      var sc=f[I.SCORE]|0,newBest=false;
+      if(sc>(bestStore[lv]||0)){bestStore[lv]=sc;newBest=true;try{localStorage.setItem('od3d_best',JSON.stringify(bestStore))}catch(e){}}
+      m.style.display='block';$('msgT').textContent='DOCKING COMPLETE';$('msgT').style.color='var(--ok)';
+      var g=f[I.GRADE]|0;$('grade').textContent=GR[g];$('grade').style.color=GRC[g];
+      $('sc').innerHTML='<table class="mono"><tr><td>Docking</td><td>'+f[I.SC_BASE]+'</td></tr><tr><td>Time bonus</td><td>+'+f[I.SC_TIME]+'</td></tr><tr><td>Fuel bonus</td><td>+'+f[I.SC_FUEL]+'</td></tr><tr><td>Precision</td><td>+'+f[I.SC_PREC]+'</td></tr><tr><td>Level \u00d7'+MUL[lv]+(f[I.ASSISTED]>0.5?' \u00b7 autopilot \u00d70.5':'')+'</td><td></td></tr><tr class="tot"><td>SCORE</td><td>'+sc+'</td></tr></table>';
+      $('msgA').textContent=(newBest?'NEW BEST! ':'Best: '+(bestStore[lv]||0)+' \u00b7 ')+'Time '+Math.round(f[I.TIME])+' s \u00b7 fuel left '+Math.round(f[I.FUEL])+'%'+(newBest?' \u00b7 ghost saved':'');
+      $('mNext').textContent='NEW RUN (N)';
+    } else if(st==2){
+      m.style.display='block';$('msgT').textContent='MISSION FAILED';$('msgT').style.color='var(--bad)';$('grade').textContent='';$('sc').innerHTML='';
+      var cr=f[I.CRASH]|0;$('msgA').textContent=cr==3?'You hit space debris.':(cr==2?'You collided with the station structure.':'Hard contact: speed, alignment or roll was out of limits.');
+      $('mNext').textContent='TRY AGAIN (N)';
+    } else if(st==3){m.style.display='none';}
+    else m.style.display='none';
+  }
+  /* docking-port marker */
+  var mk=$('marker'),px=f[I.PORTX],py=f[I.PORTY],vis=f[I.PORTVIS]>0.5;
+  if(st==0){
+    var W=innerWidth,H=innerHeight,off=false,x=px*W,y=py*H,pad=44;
+    if(!vis||x<pad||x>W-pad||y<pad||y>H-pad){off=true;var cx=W/2,cy=H/2,dx=x-cx,dy=y-cy;if(!vis){dx=-dx;dy=-dy;}
+      var k=Math.min((W/2-pad)/Math.max(Math.abs(dx),1e-3),(H/2-pad)/Math.max(Math.abs(dy),1e-3));x=cx+dx*k;y=cy+dy*k;}
+    mk.style.display='block';mk.style.left=x+'px';mk.style.top=y+'px';mk.className=off?'arrow':'';
+    mk.querySelector('.lbl').textContent='PORT '+Math.round(f[I.DIST])+' m';
+  } else mk.style.display='none';
+  if(inspOn){
+    for(var r=0;r<4;r++)for(var c=0;c<4;c++)cells[r*4+c].textContent=f[I.MAT+c*4+r].toFixed(3);
+    $('iPos').textContent='('+f[I.POS].toFixed(1)+', '+f[I.POS+1].toFixed(1)+', '+f[I.POS+2].toFixed(1)+')';
+    $('iQuat').textContent='['+f[I.QUAT].toFixed(3)+', '+f[I.QUAT+1].toFixed(3)+', '+f[I.QUAT+2].toFixed(3)+', '+f[I.QUAT+3].toFixed(3)+']';
+  }
+  if(f[I.AUTOPILOT]!=lastAP){if(lastAP!==undefined&&ready)tone(f[I.AUTOPILOT]?880:440,0.15,0.15,'triangle');lastAP=f[I.AUTOPILOT];}
+  if(f[I.EULERMODE]!=lastEuler){tone(f[I.EULERMODE]?330:660,0.12,0.15,'square');lastEuler=f[I.EULERMODE];}
+  audioFrame(f);
+};
+
+/* ---------------- buttons / keys ---------------- */
+$('bMenu').onclick=toggleMenu;$('bCam').onclick=function(){act(1)};$('bReset').onclick=function(){act(4)};$('bAP').onclick=function(){act(6)};
+$('bHelp').onclick=function(){showHelp(!helpOn)};$('mHelp').onclick=function(){showHelp(!helpOn)};$('help').onclick=function(){showHelp(false)};
+$('mInsp').onclick=toggleInsp;$('mSnd').onclick=function(){setMute(!AU.muted)};
+$('mReplay').onclick=function(){act(9)};$('mNext').onclick=function(){act(4)};$('rStop').onclick=function(){act(4)};
+Array.prototype.forEach.call(document.querySelectorAll('#menu [data-a]'),function(b){b.onclick=function(){act(parseInt(b.getAttribute('data-a')))}});
+addEventListener('keydown',function(e){
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Tab'].indexOf(e.key)>=0)e.preventDefault();
+  if(e.repeat)return;var k=e.key.toLowerCase();
+  if(k==='t')toggleInsp();else if(k==='h'||k==='?')showHelp(!helpOn);else if(k==='m')setMute(!AU.muted);else if(k==='tab'||k==='escape')toggleMenu();
+},{passive:false});
+addEventListener('blur',function(){T.tx=T.ty=T.tz=T.pit=T.yaw=T.roll=T.brake=0;push();});
+
+/* ---------------- touch sticks + gamepad -> set_touch_input ---------------- */
+var T={tx:0,ty:0,tz:0,pit:0,yaw:0,roll:0,brake:0},G={tx:0,ty:0,tz:0,pit:0,yaw:0,roll:0,brake:0};
+function cl(v){return v>1?1:(v<-1?-1:v)}
+function push(){if(window.Module&&Module._set_touch_input)Module._set_touch_input(cl(T.tx+G.tx),cl(T.ty+G.ty),cl(T.tz+G.tz),cl(T.pit+G.pit),cl(T.yaw+G.yaw),cl(T.roll+G.roll),(T.brake||G.brake)?1:0);}
+function stick(el,cb){
+  var knob=el.querySelector('.knob'),id=null,R=50;
+  function mv(t){var r=el.getBoundingClientRect(),dx=t.clientX-(r.left+r.width/2),dy=t.clientY-(r.top+r.height/2),l=Math.hypot(dx,dy);if(l>R){dx*=R/l;dy*=R/l;}knob.style.transform='translate('+dx+'px,'+dy+'px)';cb(dx/R,dy/R);}
+  el.addEventListener('touchstart',function(e){e.preventDefault();if(id===null){id=e.changedTouches[0].identifier;mv(e.changedTouches[0]);}},{passive:false});
+  el.addEventListener('touchmove',function(e){e.preventDefault();for(var i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===id)mv(e.changedTouches[i]);},{passive:false});
+  function end(e){for(var i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===id){id=null;knob.style.transform='';cb(0,0);}}
+  el.addEventListener('touchend',end);el.addEventListener('touchcancel',end);
+}
+stick($('stL'),function(x,y){T.tx=x;T.tz=-y;push();});
+stick($('stR'),function(x,y){T.yaw=x;T.pit=-y;push();});
+function hold(id,on,off){var el=$(id);
+  el.addEventListener('touchstart',function(e){e.preventDefault();el.classList.add('act');on();push();},{passive:false});
+  function end(e){e.preventDefault();el.classList.remove('act');off();push();}
+  el.addEventListener('touchend',end,{passive:false});el.addEventListener('touchcancel',end,{passive:false});}
+hold('tUp',function(){T.ty=1},function(){T.ty=0});hold('tDown',function(){T.ty=-1},function(){T.ty=0});
+hold('tRL',function(){T.roll=-1},function(){T.roll=0});hold('tRR2',function(){T.roll=1},function(){T.roll=0});
+hold('tBrake',function(){T.brake=1},function(){T.brake=0});
+hold('tKill',function(){act(3)},function(){act(10)});
+$('tAssist2').addEventListener('touchstart',function(e){e.preventDefault();act(2);},{passive:false});
+(function(){var c=$('canvas'),lx=0,ly=0,pd=0;
+  c.addEventListener('touchstart',function(e){if(e.touches.length==1){lx=e.touches[0].clientX;ly=e.touches[0].clientY;}if(e.touches.length==2)pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
+  c.addEventListener('touchmove',function(e){if(!window.Module||!Module._orbit_drag)return;
+    if(e.touches.length==1){Module._orbit_drag(e.touches[0].clientX-lx,e.touches[0].clientY-ly);lx=e.touches[0].clientX;ly=e.touches[0].clientY;}
+    else if(e.touches.length==2){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);Module._orbit_zoom((pd-d)*0.004);pd=d;}},{passive:true});})();
+
+/* Gamepad API: standard mapping */
+var gpPrev={};
+function dz(v){return Math.abs(v)<0.15?0:v}
+function pollPad(){
+  var pads=navigator.getGamepads?navigator.getGamepads():[],p=null;for(var i=0;i<pads.length;i++)if(pads[i]&&pads[i].connected){p=pads[i];break;}
+  if(p){var a=p.axes,b=p.buttons;
+    G.tx=dz(a[0]||0);G.tz=-dz(a[1]||0);G.yaw=dz(a[2]||0);G.pit=-dz(a[3]||0);
+    G.ty=(b[12]&&b[12].pressed?1:0)-(b[13]&&b[13].pressed?1:0);G.roll=(b[5]&&b[5].pressed?1:0)-(b[4]&&b[4].pressed?1:0);G.brake=b[0]&&b[0].pressed?1:0;
+    function edge(i,fn){var d=b[i]&&b[i].pressed;if(d&&!gpPrev[i])fn();gpPrev[i]=d;}
+    edge(1,function(){act(2)});edge(3,function(){act(1)});edge(9,function(){act(4)});edge(8,function(){act(6)});
+    var x=b[2]&&b[2].pressed;if(x&&!gpPrev.x)act(3);if(!x&&gpPrev.x)act(10);gpPrev.x=x;
+    push();
+  }
+  requestAnimationFrame(pollPad);
+}
+requestAnimationFrame(pollPad);
+
+/* ---------------- Emscripten glue ---------------- */
+var Module={canvas:$('canvas'),print:function(t){console.log(t)},printErr:function(t){console.warn(t)},
+  onAbort:function(){var s=$('splash');s.style.display='flex';s.style.opacity=1;s.querySelector('p').textContent='WEBGL 2 IS REQUIRED - TRY CHROME, FIREFOX, SAFARI 15+ OR EDGE';}};
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>
